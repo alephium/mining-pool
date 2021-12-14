@@ -38,6 +38,7 @@
 
     "withholdPercent": 0.005,
     "rewardInterval": 720,
+    "checkLockTime": false,
     "lockDuration": 600,
 
     "minPaymentCoins": "3.5",

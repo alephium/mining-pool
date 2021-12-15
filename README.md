@@ -49,6 +49,7 @@ configs explanation:
 
     "withholdPercent": 0.005,        // coinbase reward withhold percent(0.5% by default), used for tx fee mainly
     "rewardInterval": 720,           // update miner balances every this many seconds
+    "checkLockTime": true,           // whether to check reward lock time when allocate miner rewards
     "lockDuration": 600,             // coinbase reward lock time, 30000 seconds for mainnet, 600 seconds for testnet
 
     "minPaymentCoins": "3.5",        // minimum number of coins that a miner must earn before sending payment

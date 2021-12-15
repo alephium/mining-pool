@@ -15,7 +15,7 @@ if ((config.withholdPercent < 0) || (config.withholdPercent >= 1)){
     process.exit(1);
 }
 
-global.diff1Target = BigNumber(2).pow(256).minus(1);
+global.diff1Target = BigNumber(2).pow(256 - config.diff1TargetNumZero).minus(1);
 
 var logger = winston.createLogger({
     format: winston.format.combine(

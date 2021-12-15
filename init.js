@@ -1,6 +1,6 @@
 const Pool = require("./lib/pool");
 const winston = require('winston');
-const BigNumber = require('bignumber.js');
+const bignum = require('bignum');
 require('winston-daily-rotate-file');
 const fs = require('fs');
 
@@ -15,7 +15,7 @@ if ((config.withholdPercent < 0) || (config.withholdPercent >= 1)){
     process.exit(1);
 }
 
-global.diff1Target = BigNumber(2).pow(256 - config.diff1TargetNumZero).minus(1);
+global.diff1Target = bignum.pow(2, 256 - config.diff1TargetNumZero).sub(1);
 
 var logger = winston.createLogger({
     format: winston.format.combine(

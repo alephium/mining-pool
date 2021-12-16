@@ -1,6 +1,6 @@
 {
     "name": "alephium-mining-pool",
-    "version": "0.0.1",
+    "version": "0.1.1",
     "description": "Alephium mining pool in Node.js",
     "keywords": [
         "alephium",

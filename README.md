@@ -22,7 +22,7 @@ configs explanation:
         "purgeInterval": 300         // every this many seconds clear out the list of old bans
     },
 
-    "diff1TargetNumZero": 24,        // diff1 target leading zero num
+    "diff1TargetNumZero": 30,        // diff1 target leading zero num
     "pool": {
         "port": 20032,               // port which the server bind
         "diff": 64,                  // init difficulty
@@ -48,12 +48,11 @@ configs explanation:
     },
 
     "withholdPercent": 0.005,        // coinbase reward withhold percent(0.5% by default), used for tx fee mainly
-    "rewardInterval": 720,           // update miner balances every this many seconds
-    "checkLockTime": true,           // whether to check reward lock time when allocate miner rewards
-    "lockDuration": 600,             // coinbase reward lock time, 30000 seconds for mainnet, 600 seconds for testnet
+    "rewardInterval": 600,           // update miner balances every this many seconds
+    "confirmationTime": 30600,       // 510m by default, you can decrease this if your payment addresses have enough balance
 
     "minPaymentCoins": "3.5",        // minimum number of coins that a miner must earn before sending payment
-    "paymentInterval": 900,          // send payment every this many seconds
+    "paymentInterval": 600,          // send payment every this many seconds
 
     "addresses": [],                 // 4 addresses(we have 4 groups) to where block rewards are given
 

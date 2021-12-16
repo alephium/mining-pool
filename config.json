@@ -37,12 +37,11 @@
     },
 
     "withholdPercent": 0.005,
-    "rewardInterval": 720,
-    "checkLockTime": false,
-    "lockDuration": 600,
+    "rewardInterval": 600,
+    "confirmationTime": 30600,
 
     "minPaymentCoins": "3.5",
-    "paymentInterval": 900,
+    "paymentInterval": 600,
 
     "addresses": [],
 

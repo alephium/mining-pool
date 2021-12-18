@@ -39,6 +39,7 @@ configs explanation:
     "daemon": {
         "host": "127.0.0.1",         // alephium full node host
         "port": 12973,               // alephium full node rest api port
+        "apiKey": "xxx",             // alephium full node api key
         "minerApiPort": 10973        // alephium full node miner api port
     },
 

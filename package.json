@@ -19,7 +19,8 @@
     ],
     "main": "./init.js",
     "scripts": {
-        "start": "node ./init.js"
+        "start": "node ./init.js",
+        "test": "mocha"
     },
     "repository": {
         "type": "git",
@@ -36,5 +37,9 @@
     },
     "engines": {
         "node": ">=14"
+    },
+    "devDependencies": {
+        "chai": "^4.3.4",
+        "mocha": "^9.1.3"
     }
 }

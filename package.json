@@ -20,7 +20,7 @@
     "main": "./init.js",
     "scripts": {
         "start": "node ./init.js",
-        "test": "mocha"
+        "test": "mocha --bail"
     },
     "repository": {
         "type": "git",

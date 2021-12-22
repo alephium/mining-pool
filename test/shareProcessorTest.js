@@ -1,32 +1,8 @@
 const RedisMock = require('ioredis-mock');
 const ShareProcessor = require('../lib/shareProcessor');
-const winston = require('winston');
 const { expect, assert } = require('chai');
 const util = require('../lib/util');
-
-var config = {
-    "daemon": {
-        "host": "127.0.0.1",
-        "port": 12973,
-        "apiKey": "0000000000000000000000000000000000000000000000000000000000000000",
-        "minerApiPort": 10973
-    },
-
-    "redis": {
-        "host": "127.0.0.1",
-        "port": 6379
-    },
-
-    "withholdPercent": 0,
-    "rewardInterval": 600,
-    "confirmationTime": 30600,
-};
-
-var logger = winston.createLogger({
-    transports: new winston.transports.Console({
-        level: 'debug'
-    })
-});
+const test = require('./test');
 
 describe('test share processor', function(){
     var redisClient;
@@ -39,7 +15,7 @@ describe('test share processor', function(){
     })
 
     it('should allocate reward according shares', function(){
-        var shareProcessor = new ShareProcessor(config, logger);
+        var shareProcessor = new ShareProcessor(test.config, test.logger);
         var workerRewards = {};
         var shares = {miner0: 8, miner1: 4, miner2: 2, miner3: 1, miner4: 1};
         var totalReward = util.fromALPH(16);
@@ -50,7 +26,7 @@ describe('test share processor', function(){
     })
 
     it('should process shares', function(done){
-        var shareProcessor = new ShareProcessor(config, logger);
+        var shareProcessor = new ShareProcessor(test.config, test.logger);
         shareProcessor.redisClient = redisClient;
 
         var shareData = {
@@ -102,7 +78,7 @@ describe('test share processor', function(){
     })
 
     it('should update miner balances and remove shares', function(done){
-        var shareProcessor = new ShareProcessor(config, logger);
+        var shareProcessor = new ShareProcessor(test.config, test.logger);
         shareProcessor.redisClient = redisClient;
 
         var shares = {'miner0': '4', 'miner1': '2', 'miner2': '2'};

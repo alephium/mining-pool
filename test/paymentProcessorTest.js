@@ -1,44 +1,13 @@
 const RedisMock = require('ioredis-mock');
-const winston = require('winston');
 const { randomBytes } = require('crypto');
 const { expect, assert } = require('chai');
 const PaymentProcessor = require('../lib/paymentProcessor');
 const util = require('../lib/util');
-
-var config = {
-    "daemon": {
-        "host": "127.0.0.1",
-        "port": 12973,
-        "apiKey": "0000000000000000000000000000000000000000000000000000000000000000",
-        "minerApiPort": 10973
-    },
-
-    "redis": {
-        "host": "127.0.0.1",
-        "port": 6379
-    },
-
-    "minPaymentCoins": "3.5",
-    "paymentInterval": 600,
-
-    "addresses": [],
-
-    "wallet": {
-        "name": "",
-        "password": "",
-        "mnemonicPassphrase": ""
-    }
-};
-
-var logger = winston.createLogger({
-    transports: new winston.transports.Console({
-        level: 'debug'
-    })
-});
+const test = require('./test');
 
 describe('test payment processor', function(){
     it('should group miner balances by groupIndex', function(){
-        var paymentProcessor = new PaymentProcessor(config, logger);
+        var paymentProcessor = new PaymentProcessor(test.config, test.logger);
         var balances = {
             '1GQoT6oDKfi18m5JyCvKu9EBx4iiy6ie7cHw51NuF3idh': '4',  // groupIndex: 0
             '1H59e6Sa2WwfsPqbobmRVGUBHdHAH7ux4c1bDx3LHMFiB': '4',  // groupIndex: 0
@@ -134,7 +103,7 @@ describe('test payment processor', function(){
     it('should prepare transaction', function(){
         var utxos = generateUtxos(40, 3);
         var balances = generateBalances(30, 3.1);
-        var payment = new PaymentProcessor(config, logger);
+        var payment = new PaymentProcessor(test.config, test.logger);
 
         var expected = expectedTxData(fromPublicKey, utxos.slice(0, 32), balances);
         var txsDatas = payment.prepareTransactions(fromAddress, fromPublicKey, utxos, balances);
@@ -147,7 +116,7 @@ describe('test payment processor', function(){
     it('should prepare multi transactions if there are too many miners', function(){
         var balances = generateBalances(138, 1);
         var utxos = generateUtxos(3, 150);
-        var payment = new PaymentProcessor(config, logger);
+        var payment = new PaymentProcessor(test.config, test.logger);
 
         var expectedTx1 = expectedTxData(fromPublicKey, utxos.slice(0, 1), balances.slice(0, 136));
         var expectedTx2 = expectedTxData(fromPublicKey, utxos.slice(1, 2), balances.slice(136));
@@ -162,7 +131,7 @@ describe('test payment processor', function(){
     it('should failed prepare transaction if no enough balance', function(){
         var balances = generateBalances(10, 2);
         var utxos = generateUtxos(10, 1.1);
-        var payment = new PaymentProcessor(config, logger);
+        var payment = new PaymentProcessor(test.config, test.logger);
 
         var expectedTx = expectedTxData(fromPublicKey, utxos.slice(0, 10), balances.slice(0, 5));
         var remainBalances = balances.slice(5);
@@ -177,7 +146,7 @@ describe('test payment processor', function(){
         var balances = generateBalances(10, 2);
         var utxos = generateUtxos(2, 15);
         utxos.forEach(utxo => utxo.lockTime = Date.now() + 1000);
-        var payment = new PaymentProcessor(config, logger);
+        var payment = new PaymentProcessor(test.config, test.logger);
 
         var remainBalances = balances.slice(0);
         var txsDatas = payment.prepareTransactions(fromAddress, fromPublicKey, utxos, balances);
@@ -191,7 +160,7 @@ describe('test payment processor', function(){
         var balances = generateBalances(10, amount);
         var changedBalances = {};
         var remainBalances = {};
-        var payment = new PaymentProcessor(config, logger);
+        var payment = new PaymentProcessor(test.config, test.logger);
         var redisClient = new RedisMock();
         payment.redisClient = redisClient;
         var redisTx = redisClient.multi();

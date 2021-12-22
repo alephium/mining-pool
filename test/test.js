@@ -23,6 +23,7 @@ exports.config = {
         "port": 6379
     },
 
+    "diff1TargetNumZero": 30,
     "withholdPercent": 0,
     "rewardInterval": 600,
     "confirmationTime": 30600,

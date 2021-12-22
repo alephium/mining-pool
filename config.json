@@ -12,6 +12,8 @@
         "purgeInterval": 300
     },
 
+    "statsInterval": 60,
+
     "diff1TargetNumZero": 30,
     "pool": {
         "port": 20032,

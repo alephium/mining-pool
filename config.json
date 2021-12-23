@@ -2,6 +2,7 @@
     "logPath": "./logs/",
 
     "connectionTimeout": 600,
+    "maxConnectionsFromSameIP": 10,
 
     "banning": {
         "enabled": true,
@@ -52,4 +53,3 @@
         "mnemonicPassphrase": ""
     }
 }
-

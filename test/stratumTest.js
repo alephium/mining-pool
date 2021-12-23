@@ -17,7 +17,8 @@ var config = {
         diff: 12
     },
 
-    connectionTimeout: 5
+    connectionTimeout: 5,
+    maxConnectionsFromSameIP: 3
 };
 
 function DummyJob(){
@@ -167,4 +168,44 @@ describe('test stratum server', function(){
             done();
         }, (config.banning.purgeInterval + 1) * 1000);
     }).timeout((config.banning.purgeInterval + 2) * 1000);
+
+    it('should increase/decrease connection num when client connected/disconnected', function(){
+        var ipAddress = '11.11.11.11';
+        for (var idx = 0; idx < config.maxConnectionsFromSameIP; idx++){
+            var okey = server.addConnectionFromIP(ipAddress);
+            expect(okey).equal(true);
+        }
+        var okey = server.addConnectionFromIP(ipAddress);
+        expect(okey).equal(false);
+
+        server.removeConnectionFromIP(ipAddress);
+        okey = server.addConnectionFromIP(ipAddress);
+        expect(okey).equal(true);
+    })
+
+    it('should limit the connections from same IP', function(done){
+        var clients = [];
+        function createClient(num, callback){
+            var client = net.Socket();
+            client.connect(config.pool.port);
+            clients.push(client);
+            client.on('connect', _ => {
+                if (num === 1) callback();
+                else createClient(num - 1, callback);
+            });
+        }
+
+        createClient(config.maxConnectionsFromSameIP, function(){
+            var ipAddress = Object.keys(server.connectionNumFromIP)[0];
+            var connectionNum = server.connectionNumFromIP[ipAddress];
+            if (connectionNum && connectionNum == config.maxConnectionsFromSameIP){
+                var client = net.Socket();
+                client.connect(config.pool.port);
+                client.on('close', function(){
+                    clients.forEach(c => c.destroy());
+                    done();
+                });
+            }
+        });
+    })
 })

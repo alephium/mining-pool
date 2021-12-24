@@ -91,15 +91,18 @@ describe('test share processor', function(){
                 .multi()
                 .hgetall('balances')
                 .smembers('pendingBlocks')
+                .hgetall('foundBlocks')
                 .exec(function(error, result){
                     if (error) assert.fail('Test failed: ' + error);
                     var balances = result[0][1];
                     var pendingBlocks = result[1][1];
+                    var foundBlocks = result[2][1];
 
                     expect(balances.miner0).equal('20');
                     expect(balances.miner1).equal('10');
                     expect(balances.miner2).equal('10');
                     expect(pendingBlocks.length).equal(0);
+                    expect(foundBlocks).to.deep.equal({});
                     done();
                 });
         }
@@ -116,6 +119,7 @@ describe('test share processor', function(){
             .hset(roundKey, 'miner0', shares.miner0)
             .hset(roundKey, 'miner1', shares.miner1)
             .hset(roundKey, 'miner2', shares.miner2)
+            .hset('foundBlocks', blockData.hash, 'miner0')
             .exec(function(error, _){
                 if (error) assert.fail('Test failed: ' + error);
                 shareProcessor.allocateRewards([block], _ => checkState());

@@ -44,6 +44,11 @@
 
     "minPaymentCoins": "3.5",
     "paymentInterval": 600,
+    "txConfirmations": {
+        "chainConfirmations": 10,
+        "fromGroupConfirmations": 5,
+        "toGroupConfirmations": 5
+    },
 
     "addresses": [],
 

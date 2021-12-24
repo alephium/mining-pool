@@ -1,11 +1,21 @@
 const RedisMock = require('ioredis-mock');
 const { randomBytes } = require('crypto');
 const { expect, assert } = require('chai');
+const nock = require('nock');
 const PaymentProcessor = require('../lib/paymentProcessor');
 const util = require('../lib/util');
 const test = require('./test');
 
 describe('test payment processor', function(){
+    var redisClient;
+    this.beforeEach(function(){
+        redisClient = new RedisMock();
+    })
+
+    this.afterEach(function(){
+        redisClient.disconnect();
+    })
+
     it('should group miner balances by groupIndex', function(){
         var paymentProcessor = new PaymentProcessor(test.config, test.logger);
         var balances = {
@@ -155,44 +165,68 @@ describe('test payment processor', function(){
         expect(balances).to.deep.equal(remainBalances);
     })
 
-    it('should update balances', function(done){
-        var amount = 12, minus = 2;
-        var balances = generateBalances(10, amount);
-        var changedBalances = {};
-        var remainBalances = {};
-        var payment = new PaymentProcessor(test.config, test.logger);
-        var redisClient = new RedisMock();
-        payment.redisClient = redisClient;
+    function checkTxAndBalances(expectedTxs, expectedBalances, callback){
+        redisClient
+            .multi()
+            .smembers('transactions')
+            .hgetall('balances')
+            .exec(function(error, results){
+                if (error) assert.fail('Test error: ' + error);
+                var txs = results[0][1];
+                var remain = results[1][1];
+
+                expect(txs).to.deep.equal(expectedTxs);
+                expect(remain).to.deep.equal(expectedBalances);
+                callback();
+            });
+    }
+
+    function prepare(amount, changedAmount, callback){
+        var initBalances = generateBalances(10, amount);
+        var changedBalances = {}, remainBalances = {};
         var redisTx = redisClient.multi();
-
-        for (var idx in balances){
-            var balance = balances[idx];
+        for (var idx in initBalances){
+            var balance = initBalances[idx];
             redisTx.hincrbyfloat('balances', balance.address, parseFloat(balance.amount));
-            changedBalances[balance.address] = minus;
-            remainBalances[balance.address] = (amount - minus).toString();
-        }
-
-        var txId = randomHex(32);
-        var checkBalances = function(){
-            redisClient
-                .multi()
-                .smembers('transactions')
-                .hgetall('balances')
-                .exec(function(error, results){
-                    if (error) assert.fail('Test error: ' + error);
-                    var txs = results[0][1];
-                    var remain = results[1][1];
-
-                    expect(txs).to.deep.equal([txId]);
-                    expect(remain).to.deep.equal(remainBalances);
-                    redisClient.disconnect();
-                    done();
-                });
+            changedBalances[balance.address] = changedAmount;
+            remainBalances[balance.address] = (amount - changedAmount).toString();
         }
 
         redisTx.exec(function(error, _){
             if (error) assert.fail('Test error: ' + error);
-            payment.updateBalances(changedBalances, txId, _ => checkBalances());
+            callback(changedBalances, remainBalances);
+        });
+    }
+
+    it('should update balances', function(done){
+        var payment = new PaymentProcessor(test.config, test.logger);
+        payment.redisClient = redisClient;
+
+        prepare(12, 2, function(changedBalances, remainBalances){
+            var txId = randomHex(32);
+            payment.updateBalances(changedBalances, txId, function(){
+                checkTxAndBalances([txId], remainBalances, done);
+            });
+        });
+    })
+
+    it('should update balances when tx submitted succeed', function(done){
+        var payment = new PaymentProcessor(test.config, test.logger);
+        payment.redisClient = redisClient;
+
+        var txId = randomHex(32);
+        nock('http://127.0.0.1:12973')
+            .post('/transactions/submit', body => body.signature && body.unsignedTx)
+            .reply(200, {txId: txId});
+
+        prepare(12, 2, function(changedBalances, remainBalances){
+            var signedTx = {
+                unsignedTx: randomHex(12), signature: randomHex(12), changedBalances: changedBalances
+            };
+
+            payment.submitTxAndUpdateBalance(signedTx, function(){
+                checkTxAndBalances([txId], remainBalances, done);
+            });
         })
     })
 })

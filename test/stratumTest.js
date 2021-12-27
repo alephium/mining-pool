@@ -120,15 +120,22 @@ describe('test stratum server', function(){
         var client = net.Socket();
         client.connect(config.pool.port);
         client.on('connect', function(){
-            server.addBannedIP(client.remoteAddress);
-            assertBanned(client.remoteAddress);
+            var remoteAddress = Object.keys(server.connectionNumFromIP)[0];
+            server.addBannedIP(remoteAddress);
+            assertBanned(remoteAddress);
 
             client.end();
-            client.removeAllListeners('connect');
-            client.connect(config.pool.port);
-
             client.on('close', function(){
-                done();
+                client.removeAllListeners('connect');
+                client.removeAllListeners('close');
+
+                server.on('client.disconnected', function(_client){
+                    expect(remoteAddress).equal(_client.remoteAddress);
+                    expect(Object.keys(server.stratumClients).length).equal(0);
+                    expect(Object.keys(server.connectionNumFromIP).length).equal(0);
+                    done();
+                });
+                client.connect(config.pool.port);
             });
         });
     })
@@ -154,6 +161,7 @@ describe('test stratum server', function(){
         server.on('client.disconnected', function(stratumClient){
             assertBanned(stratumClient.remoteAddress);
             assert(Object.keys(server.stratumClients).length === 0);
+            assert(Object.keys(server.connectionNumFromIP).length === 0);
             done();
         })
     })

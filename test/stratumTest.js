@@ -166,6 +166,42 @@ describe('test stratum server', function(){
         })
     })
 
+    it('should reset shares', function(done){
+        var client = net.Socket();
+        client.connect(config.pool.port);
+
+        var shares = [
+            {id: null, method: 'mining.submit', params: {valid: true}},
+            {id: null, method: 'mining.submit', params: {valid: true}},
+            {id: null, method: 'mining.submit', params: {valid: true}},
+            {id: null, method: 'mining.submit', params: {valid: false}},
+        ];
+        client.on('connect', function(){
+            var clientId = Object.keys(server.stratumClients)[0];
+            var stratumClient = server.stratumClients[clientId];
+            assertNotBanned(client.remoteAddress);
+
+            for (var idx in shares){
+                client.write(JSON.stringify(shares[idx]) + '\n');
+            }
+
+            var invalids = 0, valids = 0;
+            stratumClient.on('submit', function(params, callback){
+                callback(null, params.valid);
+                if (params.valid) valids++;
+                else invalids++;
+                if ((valids + invalids) === shares.length){
+                    expect(stratumClient.shares.valid).equal(0);
+                    expect(stratumClient.shares.invalid).equal(0);
+                    done();
+                } else {
+                    expect(stratumClient.shares.valid).equal(valids);
+                    expect(stratumClient.shares.invalid).equal(invalids);
+                }
+            });
+        });
+    })
+
     it('should unban client when ban time expired', function(done){
         var address = '11.11.11.11';
         server.addBannedIP(address);

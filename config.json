@@ -3,7 +3,7 @@
 
     "connectionTimeout": 600,
     "maxConnectionsFromSameIP": 10,
-    "jobExpiryPeriod": 60,
+    "jobExpiryPeriod": 10,
 
     "banning": {
         "enabled": true,

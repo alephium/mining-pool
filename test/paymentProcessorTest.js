@@ -165,52 +165,7 @@ describe('test payment processor', function(){
         expect(balances).to.deep.equal(remainBalances);
     })
 
-    function checkTxAndBalances(expectedTxs, expectedBalances, callback){
-        redisClient
-            .multi()
-            .smembers('transactions')
-            .hgetall('balances')
-            .exec(function(error, results){
-                if (error) assert.fail('Test error: ' + error);
-                var txs = results[0][1];
-                var remain = results[1][1];
-
-                expect(txs).to.deep.equal(expectedTxs);
-                expect(remain).to.deep.equal(expectedBalances);
-                callback();
-            });
-    }
-
-    function prepare(amount, changedAmount, callback){
-        var initBalances = generateBalances(10, amount);
-        var changedBalances = {}, remainBalances = {};
-        var redisTx = redisClient.multi();
-        for (var idx in initBalances){
-            var balance = initBalances[idx];
-            redisTx.hincrbyfloat('balances', balance.address, parseFloat(balance.amount));
-            changedBalances[balance.address] = changedAmount;
-            remainBalances[balance.address] = (amount - changedAmount).toString();
-        }
-
-        redisTx.exec(function(error, _){
-            if (error) assert.fail('Test error: ' + error);
-            callback(changedBalances, remainBalances);
-        });
-    }
-
-    it('should update balances', function(done){
-        var payment = new PaymentProcessor(test.config, test.logger);
-        payment.redisClient = redisClient;
-
-        prepare(12, 2, function(changedBalances, remainBalances){
-            var txId = randomHex(32);
-            payment.updateBalances(changedBalances, txId, function(){
-                checkTxAndBalances([txId], remainBalances, done);
-            });
-        });
-    })
-
-    it('should update balances when tx submitted succeed', function(done){
+    it('should lock rewards before submit tx', function(done){
         var payment = new PaymentProcessor(test.config, test.logger);
         payment.redisClient = redisClient;
 
@@ -219,14 +174,151 @@ describe('test payment processor', function(){
             .post('/transactions/submit', body => body.signature && body.unsignedTx)
             .reply(200, {txId: txId});
 
+        var checkState = function(txId, remainBalances, lockedBalances){
+            var lockedRewardsKey = payment.txRewardsKey(txId)
+            redisClient
+                .multi()
+                .smembers('transactions')
+                .hgetall('balances')
+                .hgetall(lockedRewardsKey)
+                .exec(function(error, results){
+                    if (error) assert.fail('Test error: ' + error);
+                    var txs = results[0][1];
+                    var remain = results[1][1];
+                    var lockedRewards = results[2][1];
+                    Object.keys(lockedRewards).forEach(address => {
+                        lockedRewards[address] = parseFloat(lockedRewards[address]);
+                    });
+
+                    expect(txs).to.deep.equal([txId]);
+                    expect(remain).to.deep.equal(remainBalances);
+                    expect(lockedRewards).to.deep.equal(lockedBalances);
+                    done();
+                });
+        }
+
+        var prepare = function(amount, changedAmount, callback){
+            var initBalances = generateBalances(10, amount);
+            var changedBalances = {}, remainBalances = {};
+            var redisTx = redisClient.multi();
+            for (var idx in initBalances){
+                var balance = initBalances[idx];
+                redisTx.hincrbyfloat('balances', balance.address, parseFloat(balance.amount));
+                changedBalances[balance.address] = changedAmount;
+                remainBalances[balance.address] = (amount - changedAmount).toString();
+            }
+
+            redisTx.exec(function(error, _){
+                if (error) assert.fail('Test error: ' + error);
+                callback(changedBalances, remainBalances);
+            });
+        }
+
         prepare(12, 2, function(changedBalances, remainBalances){
             var signedTx = {
-                unsignedTx: randomHex(12), signature: randomHex(12), changedBalances: changedBalances
+                txId: txId, unsignedTx: randomHex(12), signature: randomHex(12), changedBalances: changedBalances
             };
 
-            payment.submitTxAndUpdateBalance(signedTx, function(){
-                checkTxAndBalances([txId], remainBalances, done);
+            payment.lockRewardsAndSubmitTx(signedTx, function(){
+                checkState(txId, remainBalances, changedBalances);
             });
         })
+    })
+
+    it('should remove locked rewards when tx confirmed', function(done){
+        var payment = new PaymentProcessor(test.config, test.logger);
+        payment.redisClient = redisClient;
+
+        var txId = randomHex(32);
+        var lockRewardsKey = payment.txRewardsKey(txId);
+        var prepare = function(amount, changedAmount, callback){
+            var initBalances = generateBalances(10, amount);
+            var redisTx = redisClient.multi();
+            redisTx.sadd('transactions', txId);
+            for (var idx in initBalances){
+                var balance = initBalances[idx];
+                redisTx.hincrbyfloat('balances', balance.address, parseFloat(balance.amount));
+                redisTx.hset(lockRewardsKey, balance.address, changedAmount);
+            }
+
+            redisTx.exec(function(error, _){
+                if (error) assert.fail('Test error: ' + error);
+                callback(initBalances);
+            });
+        }
+
+        var checkState = function(expectedBalances){
+            redisClient.multi()
+                .smembers('transactions')
+                .hgetall(lockRewardsKey)
+                .hgetall('balances')
+                .exec(function(error, results){
+                    if (error) assert.fail('Test error: ' + error);
+                    var txs = results[0][1];
+                    var lockedRewards = results[1][1];
+                    var balances = results[2][1];
+
+                    expect(txs.length).equal(0);
+                    expect(lockedRewards).to.deep.equal({});
+                    expect(balances).to.deep.equal(expectedBalances);
+                    done();
+                })
+        }
+
+        prepare(12, 2, function(balances){
+            var expectedBalances = {};
+            for (var idx in balances){
+                var balance = balances[idx];
+                expectedBalances[balance.address] = balance.amount;
+            }
+            payment.onTxConfirmed(txId, _ => checkState(expectedBalances));
+        });
+    })
+
+    it('should unlock rewards when tx failed', function(done){
+        var payment = new PaymentProcessor(test.config, test.logger);
+        payment.redisClient = redisClient;
+
+        var txId = randomHex(32);
+        var lockRewardsKey = payment.txRewardsKey(txId);
+        var prepare = function(amount, changedAmount, callback){
+            var initBalances = generateBalances(10, amount);
+            var unlockedBalances = {};
+            var redisTx = redisClient.multi();
+            redisTx.sadd('transactions', txId);
+            for (var idx in initBalances){
+                var balance = initBalances[idx];
+                redisTx.hincrbyfloat('balances', balance.address, parseFloat(balance.amount));
+                redisTx.hset(lockRewardsKey, balance.address, changedAmount);
+                unlockedBalances[balance.address] = (amount + changedAmount).toString();
+            }
+
+            redisTx.exec(function(error, _){
+                if (error) assert.fail('Test error: ' + error);
+                callback(unlockedBalances);
+            });
+        }
+
+        var checkState = function(expectedBalances){
+            redisClient.multi()
+                .smembers('transactions')
+                .hgetall(lockRewardsKey)
+                .hgetall('balances')
+                .exec(function(error, results){
+                    if (error) assert.fail('Test error: ' + error);
+                    var txs = results[0][1];
+                    var lockedRewards = results[1][1];
+                    var balances = results[2][1];
+
+                    expect(txs.length).equal(0);
+                    expect(lockedRewards).to.deep.equal({});
+                    expect(balances).to.deep.equal(expectedBalances);
+                    done();
+                })
+        }
+
+        prepare(12, 2, function(balances){
+            payment.onTxFailed(txId, _ => checkState(balances));
+        });
     })
 })

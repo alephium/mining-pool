@@ -27,21 +27,21 @@ var logger = winston.createLogger({
             filename: config.logPath + 'pool-%DATE%-debug.log',
             datePattern: 'YYYY-MM-DD',
             maxSize: '100m',
-            maxFiles: '10d',
+            maxFiles: '5d',
             level: 'debug'
         }),
         new winston.transports.DailyRotateFile({
             filename: config.logPath + 'pool-%DATE%-info.log',
             datePattern: 'YYYY-MM-DD',
             maxSize: '100m',
-            maxFiles: '10d',
+            maxFiles: '5d',
             level: 'info'
         }),
         new winston.transports.DailyRotateFile({
             filename: config.logPath + 'pool-%DATE%-error.log',
             datePattern: 'YYYY-MM-DD',
             maxSize: '100m',
-            maxFiles: '10d',
+            maxFiles: '5d',
             level: 'error'
         }),
         new winston.transports.Console({

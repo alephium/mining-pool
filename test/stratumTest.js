@@ -213,6 +213,22 @@ describe('test stratum server', function(){
         }, (config.banning.purgeInterval + 1) * 1000);
     }).timeout((config.banning.purgeInterval + 2) * 1000);
 
+    it('should not emit `forgaveBannedIP` if client has not been banned before', function(done){
+        var client = net.Socket();
+        client.connect(config.pool.port);
+
+        client.on('connect', function(){
+            var clientId = Object.keys(server.stratumClients)[0];
+            var stratumClient = server.stratumClients[clientId];
+            assertNotBanned(stratumClient.remoteAddress);
+
+            setTimeout(_ => done(), 1000);
+            stratumClient.on('forgaveBannedIP', function(){
+                assert.fail('client has not been banned before');
+            });
+        });
+    })
+
     it('should increase/decrease connection num when client connected/disconnected', function(){
         var ipAddress = '11.11.11.11';
         for (var idx = 0; idx < config.maxConnectionsFromSameIP; idx++){

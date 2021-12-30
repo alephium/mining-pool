@@ -13,7 +13,7 @@
         "purgeInterval": 300
     },
 
-    "statsInterval": 60,
+    "statsInterval": 600,
 
     "diff1TargetNumZero": 30,
     "pool": {

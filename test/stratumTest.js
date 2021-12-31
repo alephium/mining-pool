@@ -124,6 +124,7 @@ describe('test stratum server', function(){
             server.addBannedIP(remoteAddress);
             assertBanned(remoteAddress);
 
+            client.on('data', _ => {});
             client.end();
             client.on('close', function(){
                 client.removeAllListeners('connect');

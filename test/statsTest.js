@@ -38,7 +38,7 @@ describe('test stats', function(){
             if (error) assert.fail('Test error: ' + error);
             stats.getStats(interval, function(result){
                 if (result.error) assert.fail('Test error: ' + error);
-                var expectedHashRate = ((60 * Math.pow(2, test.config.diff1TargetNumZero)) / (interval * 1000 * 1000)).toFixed(2);
+                var expectedHashRate = ((60 * 16 * Math.pow(2, test.config.diff1TargetNumZero)) / (interval * 1000 * 1000)).toFixed(2);
                 expect(result.hashrate).equal(expectedHashRate);
                 checkState();
             })

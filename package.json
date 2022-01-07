@@ -32,6 +32,7 @@
         "binary-parser": "2.0.2",
         "blake3": "2.1.7",
         "ioredis": "^4.28.2",
+        "pg": "^8.7.1",
         "winston": "^3.3.3",
         "winston-daily-rotate-file": "^4.5.5"
     },

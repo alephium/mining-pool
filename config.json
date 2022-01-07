@@ -53,6 +53,15 @@
         "toGroupConfirmations": 5
     },
 
+    "persistence": {
+        "enabled": false,
+        "host": "127.0.0.1",
+        "port": 5432,
+        "user": "postgres",
+        "password": "postgres",
+        "database": "mining-pool"
+    },
+
     "addresses": [],
 
     "wallet": {

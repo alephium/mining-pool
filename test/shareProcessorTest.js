@@ -49,7 +49,7 @@ describe('test share processor', function(){
 
             shareData.foundBlock = true;
             var blockHashHex = '0011';
-            shareData.blockHash = Buffer.from(blockHashHex, 'hex');
+            shareData.blockHash = blockHashHex;
             shareProcessor.handleShare(shareData);
 
             var roundKey = shareProcessor.roundKey(
@@ -147,8 +147,8 @@ describe('test share processor', function(){
             var redisTx = redisClient.multi();
             for (var block of blocks){
                 restServer.get('/blockflow/blocks/' + block.hash).reply(200, block);
-                var path = '/blockflow/hashes?fromGroup=' + block.chainFrom + '&toGroup=' + block.chainTo + '&height=' + block.height;
-                restServer.get(path).reply(200, block.inMainChain ? {headers: [block.hash]} : {headers: ['others']});
+                var path = '/blockflow/is-block-in-main-chain?blockHash=' + block.hash;
+                restServer.get(path).reply(200, block.inMainChain ? true : false);
 
                 var blockWithTs = block.hash + ':' + block.submittedMs;
                 redisTx.sadd('pendingBlocks', blockWithTs);

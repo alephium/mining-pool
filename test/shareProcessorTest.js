@@ -49,7 +49,7 @@ describe('test share processor', function(){
 
             shareData.foundBlock = true;
             var blockHashHex = '0011';
-            shareData.blockHash = Buffer.from(blockHashHex, 'hex');
+            shareData.blockHash = blockHashHex;
             shareProcessor.handleShare(shareData);
 
             var roundKey = shareProcessor.roundKey(

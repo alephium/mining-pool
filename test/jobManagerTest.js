@@ -68,16 +68,6 @@ describe('test job manager', function(){
         expect(errMsg).equal('invalid chain index');
     })
 
-    it('should process share failed if miner address is invalid', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
-        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: invalidAddress};
-        var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(22);
-        expect(errMsg).equal('invalid worker address');
-    })
-
     it('should process share failed if nonce is invalid', function(){
         var jobManager = new JobManager();
         jobManager.addJob(job, Date.now());

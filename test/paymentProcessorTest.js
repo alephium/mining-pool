@@ -163,6 +163,15 @@ describe('test payment processor', function(){
         expect(balances.length).equal(1);
     })
 
+    it('should pop destinations if no enough utxos for tx fee', function(){
+        var balances = generateBalances(2, 5).balances;
+        var utxos = generateUtxos(5, 2);
+        var payment = new PaymentProcessor(test.config, test.logger);
+        var expectedTx = expectedTxData(fromPublicKey, utxos.slice(), balances.slice(0, 1));
+        var txData = payment.prepareTransaction(fromPublicKey, utxos, balances);
+        expect(expectedTx).to.deep.equal(txData);
+    })
+
     it('should prepare transactions failed if no enough utxos for tx fee', function(){
         var balances = generateBalances(1, 10).balances;
         var utxos = generateUtxos(5, 2);

@@ -12,6 +12,11 @@ it('should validate address', function(){
     expect(addressGroup).equal(null);
     expect(error).equal('invalid P2PKH address');
 
+    var invalidAddress3 = '    ';
+    var [addressGroup, error] = util.groupOfAddress(invalidAddress3);
+    expect(addressGroup).equal(null);
+    expect(error).equal('invalid P2PKH address format');
+
     var validAddress = '1AqVGKeHWoLJiVU7heL8EvwQN2hk5bMtvP3PsH57qWayr';
     var [okey, error] = util.isValidAddress(validAddress, 2);
     expect(okey).equal(true);

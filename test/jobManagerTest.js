@@ -67,6 +67,30 @@ describe('test job manager', function(){
         expectError(result.error, ErrorCodes.InvalidJobChainIndex, 'invalid job chain index');
     })
 
+    it('should process share failed if worker is invalid', function(){
+        var jobManager = new JobManager();
+        jobManager.addJob(job, Date.now());
+        var workers = [invalidAddress, 123, null, undefined, '.' + address + '.123', 'a'.repeat(33) + '.' + address];
+        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce};
+        for (var worker of workers){
+            params.worker = worker;
+            var result = processShare(jobManager, params, 2, 2);
+            expectError(result.error, ErrorCodes.InvalidWorker, 'invalid worker');
+        }
+    })
+
+    it('shuold process share succeed if worker is valid', function(){
+        var workers = ['.' + address, address, 'abc.' + address, '....' + address];
+        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce};
+        for (var worker of workers){
+            var jobManager = new JobManager();
+            jobManager.addJob(job, Date.now());
+            params.worker = worker;
+            var result = processShare(jobManager, params, 2, 2);
+            expect(result.error).equal(null);
+        }
+    })
+
     it('should process share failed if nonce is invalid', function(){
         var jobManager = new JobManager();
         jobManager.addJob(job, Date.now());

@@ -45,8 +45,8 @@
     "rewardInterval": 600,
     "confirmationTime": 30600,
 
-    "minPaymentCoins": "3.5",
-    "paymentInterval": 600,
+    "minPaymentCoins": "0.5",
+    "paymentInterval": 3600,
     "txConfirmations": {
         "chainConfirmations": 10,
         "fromGroupConfirmations": 5,

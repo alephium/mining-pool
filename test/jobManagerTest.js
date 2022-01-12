@@ -1,4 +1,4 @@
-const JobManager = require('../lib/jobManager');
+const { JobManager, ErrorCodes } = require('../lib/jobManager');
 const bignum = require('bignum');
 const { expect } = require('chai');
 
@@ -37,13 +37,16 @@ describe('test job manager', function(){
         expect(blockTemplate).to.deep.equal(jobManager.currentJobs[chainIndex]);
     })
 
+    function expectError(error, code, msg){
+        expect(error[0]).equal(code);
+        expect(error[1]).equal(msg);
+    }
+
     it('should process share failed if job does not exist', function(){
         var jobManager = new JobManager();
         var params = {jobId: 1, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(20);
-        expect(errMsg).equal('job not found');
+        expectError(result.error, ErrorCodes.JobNotFound, 'job not found');
     })
 
     it('should process share failed if job has expired', function(){
@@ -53,9 +56,7 @@ describe('test job manager', function(){
 
         var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(26);
-        expect(errMsg).equal('job expired');
+        expectError(result.error, ErrorCodes.JobExpired, 'job expired');
     })
 
     it('should process share failed if chainIndex is invalid', function(){
@@ -63,20 +64,19 @@ describe('test job manager', function(){
         jobManager.addJob(job, Date.now());
         var params = {jobId: job.jobId, fromGroup: job.fromGroup + 1, toGroup: job.toGroup, nonce: nonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(21);
-        expect(errMsg).equal('invalid chain index');
+        expectError(result.error, ErrorCodes.InvalidJobChainIndex, 'invalid job chain index');
     })
 
     it('should process share failed if nonce is invalid', function(){
         var jobManager = new JobManager();
         jobManager.addJob(job, Date.now());
-        var invalidNonce = '0011';
-        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: invalidNonce, worker: address};
-        var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(23);
-        expect(errMsg).equal('incorrect size of nonce');
+        var nonces = ['0011', 123, null, undefined];
+        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, worker: address};
+        for (var nonce of nonces){
+            params.nonce = nonce;
+            var result = processShare(jobManager, params, 2, 2);
+            expectError(result.error, ErrorCodes.InvalidNonce, 'invalid nonce');
+        }
     })
 
     it('should process share failed if share is duplicated', function(){
@@ -88,9 +88,7 @@ describe('test job manager', function(){
 
         var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(24);
-        expect(errMsg).equal('duplicate share');
+        expectError(result.error, ErrorCodes.DuplicatedShare, 'duplicate share');
     })
 
     it('should process share failed if difficulty is low', function(){
@@ -101,7 +99,7 @@ describe('test job manager', function(){
         var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: lowDiffNonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
         var [errCode, _] = result.error;
-        expect(errCode).equal(25);
+        expect(errCode).equal(ErrorCodes.LowDifficulty);
     })
 
     it('should process share failed if chain index unmatched', function(){
@@ -111,8 +109,7 @@ describe('test job manager', function(){
 
         var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: invalidNonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
-        var [errCode, _] = result.error;
-        expect(errCode).equal(27);
+        expect(result.error, ErrorCodes.InvalidBlockChainIndex, 'invalid block chain index');
     })
 
     it('should accept share if difficulty larger than current difficulty', function(){

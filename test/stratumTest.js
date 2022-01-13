@@ -244,6 +244,15 @@ describe('test stratum server', function(){
         expect(okey).equal(true);
     })
 
+    it('should allow more connections to whitelisted ips', function(){
+        var ip = '::ffff:11.11.11.11';
+        config.whitelistIps = [ip];
+        for (var i = 0; i < config.maxConnectionsFromSameIP; i++){
+            expect(server.addConnectionFromIP(ip)).equal(true);
+        }
+        expect(server.addConnectionFromIP(ip)).equal(true);
+    })
+
     it('should limit the connections from same IP', function(done){
         var clients = [];
         function createClient(num, callback){

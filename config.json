@@ -3,6 +3,8 @@
 
     "connectionTimeout": 600,
     "maxConnectionsFromSameIP": 10,
+    "whitelistIps": [],
+
     "jobExpiryPeriod": 10,
 
     "banning": {

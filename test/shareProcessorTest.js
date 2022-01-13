@@ -32,7 +32,8 @@ describe('test share processor', function(){
 
         var shareData = {
             job: {fromGroup: 0, toGroup: 1},
-            worker: 'a',
+            worker: 'proxy.1AqVGKeHWoLJiVU7heL8EvwQN2hk5bMtvP3PsH57qWayr',
+            workerAddress: '1AqVGKeHWoLJiVU7heL8EvwQN2hk5bMtvP3PsH57qWayr',
             difficulty: 1.2,
             foundBlock: false
         };
@@ -43,7 +44,7 @@ describe('test share processor', function(){
             shareData.job.toGroup
         );
 
-        redisClient.hget(currentRoundKey, shareData.worker, function(error, res){
+        redisClient.hget(currentRoundKey, shareData.workerAddress, function(error, res){
             if (error) assert.fail('Test failed: ' + error);
             expect(parseFloat(res)).equal(shareData.difficulty);
 
@@ -60,7 +61,7 @@ describe('test share processor', function(){
 
             redisClient
                 .multi()
-                .hget(roundKey, shareData.worker)
+                .hget(roundKey, shareData.workerAddress)
                 .smembers('pendingBlocks')
                 .hget('foundBlocks', blockHashHex)
                 .exec(function(error, result){
@@ -72,7 +73,7 @@ describe('test share processor', function(){
                     expect(parseFloat(difficulty)).equal(shareData.difficulty * 2);
                     expect(pendingBlocks.length).equal(1);
                     expect(pendingBlocks[0].startsWith(blockHashHex));
-                    expect(blockMiner).equal(shareData.worker);
+                    expect(blockMiner).equal(shareData.workerAddress);
                     done();
                 });
         });

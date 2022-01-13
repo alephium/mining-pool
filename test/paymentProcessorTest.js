@@ -30,22 +30,34 @@ describe('test payment processor', function(){
         expect(groupedBalances).to.deep.equal([
             {
                 group: '0',
-                balances: {
-                    '1GQoT6oDKfi18m5JyCvKu9EBx4iiy6ie7cHw51NuF3idh': 4,
-                    '1H59e6Sa2WwfsPqbobmRVGUBHdHAH7ux4c1bDx3LHMFiB': 4
-                }
+                balances: [
+                    {
+                        address: '1GQoT6oDKfi18m5JyCvKu9EBx4iiy6ie7cHw51NuF3idh',
+                        amount: 4
+                    },
+                    {
+                        address: '1H59e6Sa2WwfsPqbobmRVGUBHdHAH7ux4c1bDx3LHMFiB',
+                        amount: 4
+                    }
+                ]
             },
             {
                 group: '1',
-                balances: {
-                    '1FTkWfUJmERVYN6iV1jSNUkebQPS2g4xy4e3ETNB9N6Kg': 4
-                }
+                balances: [
+                    {
+                        address:'1FTkWfUJmERVYN6iV1jSNUkebQPS2g4xy4e3ETNB9N6Kg',
+                        amount: 4
+                    }
+                ]
             },
             {
                 group: '3',
-                balances: {
-                    '1EK5p5d18z4skYB9VMNiuXYQHzF6MH5QqJ1uqQfJF2TFE': 4
-                }
+                balances: [
+                    {
+                        address: '1EK5p5d18z4skYB9VMNiuXYQHzF6MH5QqJ1uqQfJF2TFE',
+                        amount: 4
+                    }
+                ]
             }
         ]);
     })
@@ -70,7 +82,7 @@ describe('test payment processor', function(){
         return utxos;
     }
 
-    function generateBalances(num, amount){
+    function generateBalances(num, amount, groupIndex){
         var balances = [];
         while (balances.length < num){
             balances.push({
@@ -78,7 +90,10 @@ describe('test payment processor', function(){
                 amount: amount.toString()
             });
         }
-        return balances;
+        return {
+            group: groupIndex ? groupIndex : 0,
+            balances: balances
+        };
     }
 
     function expectedTxData(fromPublicKey, utxos, balances){
@@ -107,20 +122,19 @@ describe('test payment processor', function(){
         }
     }
 
-    var fromAddress = randomHex(32);
     var fromPublicKey = randomHex(64);
 
-    it('should prepare transaction', function(){
+    it('should prepare transaction succeed', function(){
         var utxos = generateUtxos(40, 3);
         var balances = generateBalances(30, 3.1);
         var payment = new PaymentProcessor(test.config, test.logger);
 
-        var expected = expectedTxData(fromPublicKey, utxos.slice(0, 32), balances);
-        var txsDatas = payment.prepareTransactions(fromAddress, fromPublicKey, utxos, balances);
+        var expected = expectedTxData(fromPublicKey, utxos.slice(0, 32), balances.balances);
+        var txsDatas = payment.prepareTransactions(fromPublicKey, utxos, [balances]);
 
         expect(txsDatas.length).equal(1);
         expect(txsDatas[0]).to.deep.equal(expected);
-        expect(balances.length).equal(0);
+        expect(balances.balances.length).equal(0);
     })
 
     it('should prepare multi transactions if there are too many miners', function(){
@@ -128,41 +142,83 @@ describe('test payment processor', function(){
         var utxos = generateUtxos(3, 150);
         var payment = new PaymentProcessor(test.config, test.logger);
 
-        var expectedTx1 = expectedTxData(fromPublicKey, utxos.slice(0, 1), balances.slice(0, 136));
-        var expectedTx2 = expectedTxData(fromPublicKey, utxos.slice(1, 2), balances.slice(136));
-        var txsDatas = payment.prepareTransactions(fromAddress, fromPublicKey, utxos, balances);
+        var expectedTx1 = expectedTxData(fromPublicKey, utxos.slice(0, 1), balances.balances.slice(0, 136));
+        var expectedTx2 = expectedTxData(fromPublicKey, utxos.slice(1, 2), balances.balances.slice(136));
+        var txsDatas = payment.prepareTransactions(fromPublicKey, utxos, [balances]);
 
         expect(txsDatas.length).equal(2);
         expect(expectedTx1).to.deep.equal(txsDatas[0]);
         expect(expectedTx2).to.deep.equal(txsDatas[1]);
-        expect(balances.length).equal(0);
+        expect(balances.balances.length).equal(0);
     })
 
-    it('should failed prepare transaction if no enough balance', function(){
-        var balances = generateBalances(10, 2);
-        var utxos = generateUtxos(10, 1.1);
+    it('should prepare transactions failed if no enough utxos for transfer', function(){
+        var balances = generateBalances(1, 10).balances;
+        var utxos = generateUtxos(5, 1);
         var payment = new PaymentProcessor(test.config, test.logger);
+        var txData = payment.prepareTransaction(fromPublicKey, utxos, balances);
 
-        var expectedTx = expectedTxData(fromPublicKey, utxos.slice(0, 10), balances.slice(0, 5));
-        var remainBalances = balances.slice(5);
-        var txsDatas = payment.prepareTransactions(fromAddress, fromPublicKey, utxos, balances);
-
-        expect(txsDatas.length).equal(1);
-        expect(expectedTx).to.deep.equal(txsDatas[0]);
-        expect(balances).to.deep.equal(remainBalances);
+        expect(txData.error).equal('not enough utxos for transfer, will try to transfer later');
+        expect(utxos.length).equal(5);
+        expect(balances.length).equal(1);
     })
 
-    it('should failed prepare transaction if utxos is still locked', function(){
+    it('should pop destinations if no enough utxos for tx fee', function(){
+        var balances = generateBalances(2, 5).balances;
+        var utxos = generateUtxos(5, 2);
+        var payment = new PaymentProcessor(test.config, test.logger);
+        var expectedTx = expectedTxData(fromPublicKey, utxos.slice(), balances.slice(0, 1));
+        var txData = payment.prepareTransaction(fromPublicKey, utxos, balances);
+        expect(expectedTx).to.deep.equal(txData);
+    })
+
+    it('should prepare transactions failed if no enough utxos for tx fee', function(){
+        var balances = generateBalances(1, 10).balances;
+        var utxos = generateUtxos(5, 2);
+        var payment = new PaymentProcessor(test.config, test.logger);
+        var txData = payment.prepareTransaction(fromPublicKey, utxos, balances);
+
+        expect(txData.error).equal('not enough utxos for tx fee, will try to transfer later');
+        expect(utxos.length).equal(5);
+        expect(balances.length).equal(1);
+    })
+
+    it('should prepare transactions failed if utxos is still locked', function(){
         var balances = generateBalances(10, 2);
         var utxos = generateUtxos(2, 15);
         utxos.forEach(utxo => utxo.lockTime = Date.now() + 1000);
         var payment = new PaymentProcessor(test.config, test.logger);
 
-        var remainBalances = balances.slice(0);
-        var txsDatas = payment.prepareTransactions(fromAddress, fromPublicKey, utxos, balances);
+        var remainBalances = balances.balances.slice(0);
+        var txsDatas = payment.prepareTransactions(fromPublicKey, utxos, [balances]);
 
         expect(txsDatas.length).equal(0);
-        expect(balances).to.deep.equal(remainBalances);
+        expect(balances.balances).to.deep.equal(remainBalances);
+    })
+
+    it('should prepare transactions for multiple groups', function(){
+        var utxos = generateUtxos(10, 2);
+        var group0 = generateBalances(1, 21, 0);
+        var group1 = generateBalances(2, 4, 1);
+        var payment = new PaymentProcessor(test.config, test.logger);
+        var expectedTx = expectedTxData(fromPublicKey, utxos.slice(0, 5), group1.balances);
+        var txsDatas = payment.prepareTransactions(fromPublicKey, utxos, [group0, group1]);
+
+        expect(txsDatas.length).equal(1);
+        expect(txsDatas[0]).to.deep.equal(expectedTx);
+        expect(utxos.length).equal(5);
+    })
+
+    it('should estimate gas fee correctly', function(){
+        var utxos = generateUtxos(10, 2);
+        var group0 = generateBalances(1, 1, 0);
+        var group1 = generateBalances(2, 4, 1);
+        var payment = new PaymentProcessor(test.config, test.logger);
+        var txsDatas = payment.prepareTransactions(fromPublicKey, utxos, [group0, group1]);
+
+        expect(txsDatas.length).equal(2);
+        expect(txsDatas[0].gasAmount).equal(20000);
+        expect(txsDatas[1].gasAmount).equal(26560);
     })
 
     it('should lock rewards before submit tx', function(done){
@@ -198,7 +254,7 @@ describe('test payment processor', function(){
         }
 
         var prepare = function(amount, changedAmount, callback){
-            var initBalances = generateBalances(10, amount);
+            var initBalances = generateBalances(10, amount).balances;
             var changedBalances = {}, remainBalances = {};
             var redisTx = redisClient.multi();
             for (var idx in initBalances){
@@ -232,7 +288,7 @@ describe('test payment processor', function(){
         var txId = randomHex(32);
         var lockRewardsKey = payment.txRewardsKey(txId);
         var prepare = function(amount, changedAmount, callback){
-            var initBalances = generateBalances(10, amount);
+            var initBalances = generateBalances(10, amount).balances;
             var redisTx = redisClient.multi();
             redisTx.sadd('transactions', txId);
             for (var idx in initBalances){
@@ -282,7 +338,7 @@ describe('test payment processor', function(){
         var txId = randomHex(32);
         var lockRewardsKey = payment.txRewardsKey(txId);
         var prepare = function(amount, changedAmount, callback){
-            var initBalances = generateBalances(10, amount);
+            var initBalances = generateBalances(10, amount).balances;
             var unlockedBalances = {};
             var redisTx = redisClient.multi();
             redisTx.sadd('transactions', txId);

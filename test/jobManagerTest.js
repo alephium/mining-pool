@@ -1,6 +1,7 @@
-const JobManager = require('../lib/jobManager');
+const { JobManager, ErrorCodes, MiningJobs, JobCounter } = require('../lib/jobManager');
 const bignum = require('bignum');
 const { expect } = require('chai');
+const blockTemplate = require('../lib/blockTemplate');
 
 describe('test job manager', function(){
     global.diff1Target = bignum.pow(2, 228).sub(1);
@@ -13,122 +14,137 @@ describe('test job manager', function(){
         targetBlob: Buffer.from('00ffffff00000000000000000000000000000000000000000000000000000000', 'hex')
     };
 
+    var jobCounter = new JobCounter();
+
+    function generateMiningJobs(ts){
+        var jobs = [];
+        for (var i = 0; i < 16; i++){
+            var job = {jobId: jobCounter.next(), timestamp: ts};
+            jobs.push(job);
+        }
+        return jobs;
+    }
+
     var nonce = 'f8c8741232a4ebb0aad38ffb8e829b9bf5b00770f1ac31dc';
     var address = '1AqVGKeHWoLJiVU7heL8EvwQN2hk5bMtvP3PsH57qWayr';
     var invalidAddress = '114E4tiwXSyfvCqLnARL21Ac2pVS6GvPomw5y6HsLMwuyR';
     var defaultHost = '127.0.0.1';
     var defaultPort = 11111;
-    var defaultExpiryPeriod = 500; // 500ms
 
     function processShare(jobManager, params, prevDiff, currDiff){
-        return jobManager.processShare(params, prevDiff, currDiff, defaultHost, defaultPort, defaultExpiryPeriod);
+        return jobManager.processShare(params, prevDiff, currDiff, defaultHost, defaultPort);
     }
 
-    it('should add job', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
+    it('should handle jobs properly', function(){
+        var miningJobs = new MiningJobs(500);
+        var now = Date.now();
+        var jobs1 = generateMiningJobs(now - 600);
+        var jobs2 = generateMiningJobs(now);
 
-        var chainIndex = job.fromGroup * 4 + job.toGroup;
-        var jobId = job.jobId;
-        var blockTemplate = jobManager.validJobs[jobId];
-        expect(blockTemplate.headerBlob).equal(job.headerBlob);
-        expect(blockTemplate.txsBlob).equal(job.txsBlob);
-        expect(blockTemplate.targetBlob).equal(job.targetBlob);
-        expect(blockTemplate).to.deep.equal(jobManager.currentJobs[chainIndex]);
+        expect(miningJobs.jobsList.length).equal(0);
+        miningJobs.addJobs(jobs1, now - 600);
+        expect(miningJobs.jobsList.length).equal(1);
+
+        miningJobs.addJobs(jobs2, now);
+        expect(miningJobs.jobsList.length).equal(1);
+        expect(miningJobs.jobsList[0]).to.deep.equal(jobs2);
+        jobs2.forEach(job => expect(miningJobs.getJob(job.jobId)).to.deep.equal(job));
+        jobs1.forEach(job => expect(miningJobs.getJob(job.jobId)).equal(undefined));
     })
+
+    function expectError(error, code, msg){
+        expect(error[0]).equal(code);
+        expect(error[1]).equal(msg);
+    }
+
+    function defaultJobManager(timestamp){
+        var jobManager = new JobManager();
+        job.jobId = jobCounter.next();
+        var jobTs = timestamp ? timestamp : Date.now();
+        jobManager.validJobs.addJobs([new blockTemplate(job, jobTs)], jobTs);
+        return jobManager;
+    }
 
     it('should process share failed if job does not exist', function(){
         var jobManager = new JobManager();
         var params = {jobId: 1, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(20);
-        expect(errMsg).equal('job not found');
-    })
-
-    it('should process share failed if job has expired', function(){
-        var jobManager = new JobManager();
-        var jobTs = Date.now() - defaultExpiryPeriod * 2;
-        jobManager.addJob(job, jobTs);
-
-        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: address};
-        var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(26);
-        expect(errMsg).equal('job expired');
+        expectError(result.error, ErrorCodes.JobNotFound, 'job not found, maybe expired');
     })
 
     it('should process share failed if chainIndex is invalid', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
+        var jobManager = defaultJobManager();
         var params = {jobId: job.jobId, fromGroup: job.fromGroup + 1, toGroup: job.toGroup, nonce: nonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(21);
-        expect(errMsg).equal('invalid chain index');
+        expectError(result.error, ErrorCodes.InvalidJobChainIndex, 'invalid job chain index');
     })
 
-    it('should process share failed if miner address is invalid', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
-        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: invalidAddress};
-        var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(22);
-        expect(errMsg).equal('invalid worker address');
+    it('should process share failed if worker is invalid', function(){
+        var jobManager = defaultJobManager();
+        var workers = [invalidAddress, 123, null, undefined, '.' + address + '.123', 'a'.repeat(33) + '.' + address];
+        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce};
+        for (var worker of workers){
+            params.worker = worker;
+            var result = processShare(jobManager, params, 2, 2);
+            expectError(result.error, ErrorCodes.InvalidWorker, 'invalid worker');
+        }
+    })
+
+    it('shuold process share succeed if worker is valid', function(){
+        var workers = ['.' + address, address, 'abc.' + address, '....' + address];
+        var params = {fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce};
+        var ts = Date.now();
+        for (var worker of workers){
+            var jobManager = new JobManager();
+            job.jobId = jobCounter.next();
+            jobManager.validJobs.addJobs([new blockTemplate(job, ts)], ts);
+            params.jobId = job.jobId;
+            params.worker = worker;
+            var result = processShare(jobManager, params, 2, 2);
+            expect(result.error).equal(null);
+        }
     })
 
     it('should process share failed if nonce is invalid', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
-        var invalidNonce = '0011';
-        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: invalidNonce, worker: address};
-        var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(23);
-        expect(errMsg).equal('incorrect size of nonce');
+        var jobManager = defaultJobManager();
+        var nonces = ['0011', 123, null, undefined];
+        var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, worker: address};
+        for (var nonce of nonces){
+            params.nonce = nonce;
+            var result = processShare(jobManager, params, 2, 2);
+            expectError(result.error, ErrorCodes.InvalidNonce, 'invalid nonce');
+        }
     })
 
     it('should process share failed if share is duplicated', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
-        var blockTemplate = jobManager.validJobs[job.jobId];
+        var jobManager = defaultJobManager();
+        var blockTemplate = jobManager.validJobs.jobsList[0][0];
         var result = blockTemplate.registerSubmit(nonce);
         expect(result).equal(true);
-
         var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
-        var [errCode, errMsg] = result.error;
-        expect(errCode).equal(24);
-        expect(errMsg).equal('duplicate share');
+        expectError(result.error, ErrorCodes.DuplicatedShare, 'duplicate share');
     })
 
     it('should process share failed if difficulty is low', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
+        var jobManager = defaultJobManager();
         var lowDiffNonce = '301d0b1f7e61e1d532d37df520f1acc92cfccc48de323e1c';
-
         var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: lowDiffNonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
         var [errCode, _] = result.error;
-        expect(errCode).equal(25);
+        expect(errCode).equal(ErrorCodes.LowDifficulty);
     })
 
     it('should process share failed if chain index unmatched', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
+        var jobManager = defaultJobManager();
         var invalidNonce = 'b6414be3a40e1a2852b3171e4462846ea48c777104b03e5e';
-
         var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: invalidNonce, worker: address};
         var result = processShare(jobManager, params, 2, 2);
-        var [errCode, _] = result.error;
-        expect(errCode).equal(27);
+        expect(result.error, ErrorCodes.InvalidBlockChainIndex, 'invalid block chain index');
     })
 
     it('should accept share if difficulty larger than current difficulty', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
-
+        var jobManager = defaultJobManager();
         var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: address};
         var currentDiff = 10;
         var prevDiff = 2;
@@ -142,9 +158,7 @@ describe('test job manager', function(){
     })
 
     it('should accept share if difficulty larger than previous difficulty', function(){
-        var jobManager = new JobManager();
-        jobManager.addJob(job, Date.now());
-
+        var jobManager = defaultJobManager();
         var params = {jobId: job.jobId, fromGroup: job.fromGroup, toGroup: job.toGroup, nonce: nonce, worker: address};
         var currentDiff = 20;
         var prevDiff = 10;

@@ -34,7 +34,8 @@
         "ioredis": "^4.28.2",
         "pg": "^8.7.1",
         "winston": "^3.3.3",
-        "winston-daily-rotate-file": "^4.5.5"
+        "winston-daily-rotate-file": "^4.5.5",
+        "node-cache": "^5.1.2"
     },
     "engines": {
         "node": ">=14"

@@ -26,6 +26,49 @@ describe('test share processor', function(){
         })
     })
 
+    it('should ignore duplicated shares', function(done){
+        var shareProcessor = new ShareProcessor(test.config, test.logger);
+        shareProcessor.redisClient = redisClient;
+
+        var share1 = {job: {fromGroup: 0, toGroup: 1}, foundBlock: false, blockHash: 'hash1', difficulty: 1, workerAddress: 'miner1'};
+        var share2 = {job: {fromGroup: 0, toGroup: 1}, foundBlock: false, blockHash: 'hash2', difficulty: 2, workerAddress: 'miner1'};
+        var invalidShare = {job: {fromGroup: 0, toGroup: 1}, foundBlock: false, blockHash: 'hash1', difficulty: 3, workerAddress: 'miner1'};
+
+        var checkState = function(cacheKey, roundKey, callback){
+            redisClient
+                .multi()
+                .hget(roundKey, 'miner1')
+                .smembers(cacheKey)
+                .exec(function(error, results){
+                    if (error) assert.fail('Test failed: ' + error);
+                    var difficulty = results[0][1];
+                    var shareHashes = results[1][1];
+                    callback(difficulty, shareHashes);
+                });
+        };
+
+        var cacheKey = shareProcessor.shareCacheKey(0, 1);
+        var currentRoundKey = shareProcessor.currentRoundKey(0, 1);
+        util.executeForEach([share1, share2, invalidShare], (share, callback) => {
+            shareProcessor._handleShare(share, callback);
+        }, function(){
+            checkState(cacheKey, currentRoundKey, function(difficulty, shareHashes){
+                expect(parseFloat(difficulty)).equal(share1.difficulty + share2.difficulty);
+                expect(shareHashes).to.deep.equal([share1.blockHash, share2.blockHash]);
+
+                var blockShare = {job: {fromGroup: 0, toGroup: 1}, foundBlock: true, blockHash: 'hash3', difficulty: 3, workerAddress: 'miner1'};
+                shareProcessor._handleShare(blockShare, function(){
+                    var roundKey = shareProcessor.roundKey(0, 1, blockShare.blockHash);
+                    checkState(cacheKey, roundKey, function(difficulty, shareHashes){
+                        expect(parseFloat(difficulty)).equal(share1.difficulty + share2.difficulty + blockShare.difficulty);
+                        expect(shareHashes).to.deep.equal([]);
+                        done();
+                    });
+                });
+            });
+        });
+    })
+
     it('should process shares', function(done){
         var shareProcessor = new ShareProcessor(test.config, test.logger);
         shareProcessor.redisClient = redisClient;
@@ -38,44 +81,47 @@ describe('test share processor', function(){
             foundBlock: false
         };
 
-        shareProcessor.handleShare(shareData);
-        var currentRoundKey = shareProcessor.currentRoundKey(
-            shareData.job.fromGroup,
-            shareData.job.toGroup
-        );
+        shareProcessor._handleShare(shareData, function(){
 
-        redisClient.hget(currentRoundKey, shareData.workerAddress, function(error, res){
-            if (error) assert.fail('Test failed: ' + error);
-            expect(parseFloat(res)).equal(shareData.difficulty);
-
-            shareData.foundBlock = true;
-            var blockHashHex = '0011';
-            shareData.blockHash = blockHashHex;
-            shareProcessor.handleShare(shareData);
-
-            var roundKey = shareProcessor.roundKey(
+            var currentRoundKey = shareProcessor.currentRoundKey(
                 shareData.job.fromGroup,
-                shareData.job.toGroup,
-                blockHashHex
+                shareData.job.toGroup
             );
 
-            redisClient
-                .multi()
-                .hget(roundKey, shareData.workerAddress)
-                .smembers('pendingBlocks')
-                .hget('foundBlocks', blockHashHex)
-                .exec(function(error, result){
-                    if (error) assert.fail('Test failed: ' + error);
-                    var difficulty = result[0][1];
-                    var pendingBlocks = result[1][1];
-                    var blockMiner = result[2][1];
+            redisClient.hget(currentRoundKey, shareData.workerAddress, function(error, res){
+                if (error) assert.fail('Test failed: ' + error);
+                expect(parseFloat(res)).equal(shareData.difficulty);
 
-                    expect(parseFloat(difficulty)).equal(shareData.difficulty * 2);
-                    expect(pendingBlocks.length).equal(1);
-                    expect(pendingBlocks[0].startsWith(blockHashHex));
-                    expect(blockMiner).equal(shareData.workerAddress);
-                    done();
+                shareData.foundBlock = true;
+                var blockHashHex = '0011';
+                shareData.blockHash = blockHashHex;
+                shareProcessor._handleShare(shareData, function(){
+
+                    var roundKey = shareProcessor.roundKey(
+                        shareData.job.fromGroup,
+                        shareData.job.toGroup,
+                        blockHashHex
+                    );
+
+                    redisClient
+                        .multi()
+                        .hget(roundKey, shareData.workerAddress)
+                        .smembers('pendingBlocks')
+                        .hget('foundBlocks', blockHashHex)
+                        .exec(function(error, result){
+                            if (error) assert.fail('Test failed: ' + error);
+                            var difficulty = result[0][1];
+                            var pendingBlocks = result[1][1];
+                            var blockMiner = result[2][1];
+
+                            expect(parseFloat(difficulty)).equal(shareData.difficulty * 2);
+                            expect(pendingBlocks.length).equal(1);
+                            expect(pendingBlocks[0].startsWith(blockHashHex));
+                            expect(blockMiner).equal(shareData.workerAddress);
+                            done();
+                        });
                 });
+            });
         });
     })
 

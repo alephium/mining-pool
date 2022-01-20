@@ -105,6 +105,18 @@ describe('test job manager', function(){
         }
     })
 
+    it('should decode address', function(){
+        var jobManager = defaultJobManager();
+        var valids = [address, 'a..bc....' + address, address + '.ab..cde', address + '.', '.' + address, 'test.' + address, address + '.test'];
+        var invalids = [invalidAddress, 'a'.repeat(33) + '.' + address, address + '.' + 'a'.repeat(33), 1234, null, undefined];
+        for (var worker of valids){
+            expect(jobManager.getWorkerAddress(worker)).equal(address);
+        }
+        for (var worker of invalids){
+            expect(jobManager.getWorkerAddress(worker)).equal(null);
+        }
+    })
+
     it('should process share failed if nonce is invalid', function(){
         var jobManager = defaultJobManager();
         var nonces = ['0011', 123, null, undefined];

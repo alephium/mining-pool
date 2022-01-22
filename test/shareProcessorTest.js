@@ -32,37 +32,44 @@ describe('test share processor', function(){
 
         var share1 = {job: {fromGroup: 0, toGroup: 1}, foundBlock: false, blockHash: 'hash1', difficulty: 1, workerAddress: 'miner1'};
         var share2 = {job: {fromGroup: 0, toGroup: 1}, foundBlock: false, blockHash: 'hash2', difficulty: 2, workerAddress: 'miner1'};
-        var invalidShare = {job: {fromGroup: 0, toGroup: 1}, foundBlock: false, blockHash: 'hash1', difficulty: 3, workerAddress: 'miner1'};
+        var invalidShare1 = {job: {fromGroup: 0, toGroup: 1}, foundBlock: false, blockHash: 'hash1', difficulty: 3, workerAddress: 'miner1'};
+        var invalidShare2 = {job: {fromGroup: 0, toGroup: 1}, foundBlock: false, blockHash: 'hash1', difficulty: 3, workerAddress: 'miner2'};
 
-        var checkState = function(cacheKey, roundKey, callback){
+        var checkState = function(roundKey, callback){
             redisClient
                 .multi()
                 .hget(roundKey, 'miner1')
-                .smembers(cacheKey)
+                .hget(roundKey, 'miner2')
                 .exec(function(error, results){
                     if (error) assert.fail('Test failed: ' + error);
-                    var difficulty = results[0][1];
-                    var shareHashes = results[1][1];
-                    callback(difficulty, shareHashes);
+                    var difficulty1 = results[0][1];
+                    var difficulty2 = results[1][1];
+                    callback(difficulty1, difficulty2);
                 });
         };
 
-        var cacheKey = shareProcessor.shareCacheKey(0, 1);
         var currentRoundKey = shareProcessor.currentRoundKey(0, 1);
-        util.executeForEach([share1, share2, invalidShare], (share, callback) => {
+        var key1 = shareProcessor.shareCacheKey(0, 1, share1.blockHash);
+        var key2 = shareProcessor.shareCacheKey(0, 1, share2.blockHash);
+        util.executeForEach([share1, share2, invalidShare1, invalidShare2], (share, callback) => {
             shareProcessor._handleShare(share, callback);
         }, function(){
-            checkState(cacheKey, currentRoundKey, function(difficulty, shareHashes){
-                expect(parseFloat(difficulty)).equal(share1.difficulty + share2.difficulty);
-                expect(shareHashes).to.deep.equal([share1.blockHash, share2.blockHash]);
+            checkState(currentRoundKey, function(diff1, diff2){
+                expect(parseFloat(diff1)).equal(share1.difficulty + share2.difficulty);
+                expect(diff2).equal(null);
 
                 var blockShare = {job: {fromGroup: 0, toGroup: 1}, foundBlock: true, blockHash: 'hash3', difficulty: 3, workerAddress: 'miner1'};
                 shareProcessor._handleShare(blockShare, function(){
                     var roundKey = shareProcessor.roundKey(0, 1, blockShare.blockHash);
-                    checkState(cacheKey, roundKey, function(difficulty, shareHashes){
-                        expect(parseFloat(difficulty)).equal(share1.difficulty + share2.difficulty + blockShare.difficulty);
-                        expect(shareHashes).to.deep.equal([]);
-                        done();
+                    checkState(roundKey, function(diff1, diff2){
+                        expect(parseFloat(diff1)).equal(share1.difficulty + share2.difficulty + blockShare.difficulty);
+                        expect(diff2).equal(null);
+
+                        redisClient.exists(key1, key2, function(error, result){
+                            if (error) assert.fail('Test failed: ' + error);
+                            expect(result).equal(2);
+                            done();
+                        });
                     });
                 });
             });

@@ -44,9 +44,11 @@
     },
 
     "withholdPercent": 0.005,
+    "rewardEnabled": true,
     "rewardInterval": 600,
     "confirmationTime": 30600,
 
+    "paymentEnabled": true,
     "minPaymentCoins": "0.5",
     "paymentInterval": 3600,
     "txConfirmations": {

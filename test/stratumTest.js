@@ -155,7 +155,7 @@ describe('test stratum server', function(){
 
             stratumClient.on('submit', function(params, callback){
                 expect(params).equal(submitMessage.params);
-                callback(null, false);
+                callback('invalid share');
             });
         });
 

@@ -49,9 +49,11 @@ configs explanation:
     },
 
     "withholdPercent": 0.005,        // coinbase reward withhold percent(0.5% by default), used for tx fee mainly
+    "rewardEnabled": true,           // enabled by default
     "rewardInterval": 600,           // update miner balances every this many seconds
     "confirmationTime": 30600,       // 510m by default, you can decrease this if your payment addresses have enough balance
 
+    "paymentEnabled": true,          // enabled by default
     "minPaymentCoins": "3.5",        // minimum number of coins that a miner must earn before sending payment
     "paymentInterval": 600,          // send payment every this many seconds
 

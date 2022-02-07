@@ -50,6 +50,18 @@ describe('test stratum server', function(){
         params: 'block'
     };
 
+    var subscribeMessage = {
+        id: null,
+        method: 'mining.subscribe',
+        params: []
+    };
+
+    var authorizeMessage = {
+        id: null,
+        method: 'mining.authorize',
+        params: []
+    };
+
     function assertBanned(address){
         var [banned, _] = server.isBanned(address);
         assert(banned);
@@ -83,22 +95,28 @@ describe('test stratum server', function(){
     it('should work as expected', function(done){
         var client = net.Socket();
         var jobs = [new DummyJob()];
+        var responses = [];
 
         setupClient(client, function(message){
-            switch(message.method) {
-                case 'mining.set_difficulty':
-                    expect(message.params).to.deep.equal([config.pool.diff]);
-                    break;
-                case 'mining.notify':
-                    expect(message.params).to.deep.equal(jobs.map(job => job.getJobParams()));
-                    break;
-                case 'mining.submit_result':
-                    expect(message.result).equal(true);
-                    client.end();
-                    done();
-                    break;
-                default:
-                    assert(false, 'Unknow message type: ' + message.method);
+            responses.push(message);
+            if (responses.length === 6){
+                // mining.set_difficulty
+                expect(responses[0].params).to.deep.equal([config.pool.diff]);
+                // mining.notify
+                expect(responses[1].params).to.deep.equal(jobs.map(job => job.getJobParams()));
+                // submit result
+                expect(responses[2].result).equal(true);
+                // authorize result
+                expect(responses[3].result).equal(true);
+                // mining.set_extranonce
+                expect(responses[4].method).equal('mining.set_extranonce');
+                expect(responses[4].params.length).equal(1);
+                expect(responses[4].params[0].length).equal(4);
+                // subscribe result
+                expect(responses[5]).to.deep.equal({id: null, result: 'result'});
+
+                client.end();
+                done();
             }
         });
 
@@ -113,6 +131,8 @@ describe('test stratum server', function(){
             assert(clientIds.length === 1);
             server.broadcastMiningJobs(jobs);
             client.write(JSON.stringify(submitMessage) + '\n');
+            client.write(JSON.stringify(authorizeMessage) + '\n');
+            client.write(JSON.stringify(subscribeMessage) + '\n');
         });
     })
 

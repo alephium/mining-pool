@@ -14,7 +14,7 @@ configs explanation:
 
     "connectionTimeout": 600,        // disconnect workers that haven't submitted shares for this many seconds
     "maxConnectionsFromSameIP": 10,  // limit number of connection from same IP address
-    "whitelistIps": [],				 // whitelist IP address from 'maxConnectionsFromSameIP'
+    "whitelistIps": [],		     // whitelist IP address from 'maxConnectionsFromSameIP'
 	
     "jobExpiryPeriod": 10,           // job expires after set period
 	
@@ -60,19 +60,19 @@ configs explanation:
     "paymentEnabled": true,          // enabled by default
     "minPaymentCoins": "3.5",        // minimum number of coins that a miner must earn before sending payment
     "paymentInterval": 600,          // send payment every this many seconds
-    "txConfirmations": {			 // Check tx confirmations to remove/pay back balance after tx
+    "txConfirmations": {             // Check tx confirmations to remove/pay back balance after tx
         "chainConfirmations": 10,
         "fromGroupConfirmations": 5,
         "toGroupConfirmations": 5
     },
 
-    "persistence": {				 // persistent shares and blocks
-        "enabled": false,			 // disabled by default
-        "host": "127.0.0.1",		 // postgresql ip
-        "port": 5432,				 // postgresql port
-        "user": "postgres",			 // postgresql user
-        "password": "postgres",		 // postgresql password
-        "database": "mining-pool"	 // database name
+    "persistence": {		     // persistent shares and blocks
+        "enabled": false,	     // disabled by default
+        "host": "127.0.0.1",	     // postgresql ip
+        "port": 5432,		     // postgresql port
+        "user": "postgres",	     // postgresql user
+        "password": "postgres",	     // postgresql password
+        "database": "mining-pool"    // database name
     },
 	
     "addresses": [],                 // 4 addresses(we have 4 groups) to where block rewards are given

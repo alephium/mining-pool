@@ -22,6 +22,7 @@ var config = {
 };
 
 function DummyJob(){
+    var target = global.diff1Target.mul(1024).div(Math.ceil(config.pool.diff * 1024)).toBuffer().toString('hex');
     this.getJobParams = function(){
         return {
             jobId: 1,
@@ -29,7 +30,7 @@ function DummyJob(){
             toGroup: 0,
             headerBlob: 'headerBlob',
             txsBlob: 'txsBlob',
-            targetBlob: 'targetBlob'
+            targetBlob: target
         }
     }
 }

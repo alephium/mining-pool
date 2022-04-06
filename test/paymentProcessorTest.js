@@ -111,7 +111,7 @@ describe('test payment processor', function(){
         var expectedInputs = utxos.map(utxo => utxo.ref);
         var expectedDestinations = balances.map(e => ({
             address: e.address,
-            amount: util.fromALPH(e.amount).toString()
+            alphAmount: util.fromALPH(e.amount).toString()
         }));
         return {
             fromPublicKey: fromPublicKey,

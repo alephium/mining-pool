@@ -128,7 +128,7 @@ describe('test share processor', function(){
         shareProcessor.redisClient = redisClient;
 
         var rewardAmount = '4000000000000000000';
-        var transactions = [{outputs:[{amount: rewardAmount}]}];
+        var transactions = [{unsigned:{fixedOutputs:[{alphAmount: rewardAmount}]}}];
         var currentMs = Date.now();
         var confirmationTime = test.config.confirmationTime * 1000;
         var blocks = [

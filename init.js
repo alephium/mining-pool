@@ -4,12 +4,14 @@ const bignum = require('bignum');
 require('winston-daily-rotate-file');
 const fs = require('fs');
 
-if (!fs.existsSync('config.json')){
-    console.log('config.json does not exist.');
+const CONFIG_FILE = process.env.CONFIG_FILE || 'config.json';
+
+if (!fs.existsSync(CONFIG_FILE)){
+    console.log(`${CONFIG_FILE} does not exist.`);
     process.exit(1);
 }
 
-var config = JSON.parse(fs.readFileSync("config.json", {encoding: 'utf8'}));
+var config = JSON.parse(fs.readFileSync(CONFIG_FILE, {encoding: 'utf8'}));
 if ((config.withholdPercent < 0) || (config.withholdPercent >= 1)){
     console.log('invalid withhold percent');
     process.exit(1);

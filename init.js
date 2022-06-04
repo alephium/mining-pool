@@ -17,6 +17,18 @@ if ((config.withholdPercent < 0) || (config.withholdPercent >= 1)){
     process.exit(1);
 }
 
+if (config.confirmationTime < 30600) {
+    console.warn("\x1b[31m`confirmationTime` less than 30600, please make sure that the pool wallet has enough balance to pay the rewards\x1b[0m")
+}
+
+if (config.withholdPercent === 0){
+    console.warn("\x1b[31m`withholdPercent` is 0, please make sure that the pool wallet has enough balance to pay the transaction fee\x1b[0m")
+}
+
+if (!config.daemon.apiKey || config.daemon.apiKey === '') {
+    console.warn("\x1b[31m`apiKey` is not configured, please make sure you don't need an apiKey to access your full node\x1b[0m")
+}
+
 global.diff1Target = bignum.pow(2, 256 - config.diff1TargetNumZero).sub(1);
 
 var logger = winston.createLogger({

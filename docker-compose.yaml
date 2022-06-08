@@ -9,7 +9,7 @@ networks:
 
 services:
   mining-pool:
-    image: fastboy86/mining-pool-docker:v1.3.0
+    image: mauroferra/mining-pool:v1.3.0
     container_name: mining-pool
     depends_on:
       - redis

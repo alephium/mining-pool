@@ -98,17 +98,19 @@ npm run start
 
 ## Docker:
 
-The provided docker-compose file allows you to deploy Redis, Postgres and the Alephium mining pool in 3 simple steps:
+The provided docker-compose file allows you to deploy Redis, Postgres and the Alephium mining pool in 2 simple steps:
 
 
 ### Clone the repo and move to its folder:
 ```shell
 git clone https://github.com/alephium/mining-pool.git && cd mining-pool
+docker-compose up -d
 ```
 
-### Build the Docker image:
 
-1. From local sources:
+### (optional) Build different Docker image variants:
+
+1. From (modified) local sources:
 ```shell
 docker build -t mining-pool:latest .
 ```
@@ -121,11 +123,6 @@ docker build -t mining-pool:latest https://github.com/alephium/mining-pool.git
 3. From latest release:
 ```shell
 docker build -t mining-pool:latest -f Dockerfile-release .
-```
-
-### Run
-```shell
-docker-compose up -d
 ```
 
 

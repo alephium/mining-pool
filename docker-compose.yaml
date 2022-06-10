@@ -11,6 +11,8 @@ services:
   mining-pool:
     # replace with the image name (and version) you have built using the provided Dockerfile
     image: mining-pool:latest
+    # optional automatic build step, if an image was not already built
+    build: .
     container_name: mining-pool
     depends_on:
       - redis

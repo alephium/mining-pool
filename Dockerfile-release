@@ -1,7 +1,9 @@
 FROM node:16 AS build
 ENV NODE_ENV=production
 WORKDIR /home/node/mining-pool
-ADD . /home/node/mining-pool/
+RUN curl -o mining-pool-latest.tar.gz -L https://api.github.com/repos/alephium/mining-pool/tarball
+RUN tar -xf mining-pool-latest.tar.gz && rm mining-pool-latest.tar.gz
+RUN cd * && mv ./* ../. && cd ..
 RUN npm install
 
 FROM node:16 AS run

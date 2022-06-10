@@ -9,7 +9,8 @@ networks:
 
 services:
   mining-pool:
-    image: mauroferra/mining-pool:v1.3.0
+    # replace with the image name (and version) you have built using the provided Dockerfile
+    image: mining-pool:latest
     container_name: mining-pool
     depends_on:
       - redis

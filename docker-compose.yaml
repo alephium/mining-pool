@@ -1,0 +1,59 @@
+version: "3.3"
+
+volumes:
+  logs: {}
+  dbdata: {}
+
+networks:
+  backend:
+
+services:
+  mining-pool:
+    # replace with the image name (and version) you have built using the provided Dockerfile
+    image: mining-pool:latest
+    # optional automatic build step, if an image was not already built
+    build: .
+    container_name: mining-pool
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+    ports:
+      - 20032:20032
+    volumes:
+      # Pool logs will be stored on a volume called "logs", and can be mounted to a local path
+      # Due to the Node user, mounts need to be owned by 1000:1000:
+      # mkdir ./logs && chown 1000:1000 ./logs && chmod 644 ./logs
+      # - ./logs:/home/node/mining-pool/logs
+      - logs:/home/node/mining-pool/logs
+      # The following line requires your own config file in the current folder
+      # Please refer to the Readme for the sections "persistence" and "redis" in a Docker setup
+      - ./composePoolConfig.json:/home/node/mining-pool/lib/config.json
+    networks:
+      - backend
+
+  redis:
+    image: redis:latest
+    container_name: mining-redis
+    ports:
+      # still here only for debugging purposes, not required
+      - 6379:6379
+    command: redis-server
+    restart: unless-stopped
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:latest
+    container_name: mining-postgres
+    ports:
+      # here for exposing the db to an admin tool, while not conflicting with
+      # the default port of an eventual other PostgreSQL installation on the same host
+      - 25432:5432
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    restart: unless-stopped
+    networks:
+      - backend

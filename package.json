@@ -17,9 +17,9 @@
         "vekexasia",
         "TheSeven"
     ],
-    "main": "./init.js",
+    "main": "./lib/init.js",
     "scripts": {
-        "start": "node ./init.js",
+        "start": "node ./lib/init.js",
         "test": "mocha --bail --exit"
     },
     "repository": {

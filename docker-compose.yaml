@@ -28,7 +28,7 @@ services:
       - logs:/home/node/mining-pool/logs
       # The following line requires your own config file in the current folder
       # Please refer to the Readme for the sections "persistence" and "redis" in a Docker setup
-      - ./config.json:/home/node/mining-pool/config.json
+      - ./composePoolConfig.json:/home/node/mining-pool/lib/config.json
     networks:
       - backend
 

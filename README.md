@@ -34,7 +34,7 @@ configs explanation:
     "pool": {
         "port": 20032,                  // port which the server bind
         "diff": 64,                     // init difficulty
-
+        "proxyProtocol": false,         // enable it to get real client IPs if you are behind a reverse proxy that uses Proxy Protocol v1  
         "varDiff": {
             "minDiff": 16,              // minimum difficulty
             "maxDiff": 4096,            // maximum difficulty

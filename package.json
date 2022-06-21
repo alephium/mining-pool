@@ -31,6 +31,7 @@
         "bignum": "0.13.1",
         "binary-parser": "2.0.2",
         "blake3": "2.1.7",
+        "findhit-proxywrap": "^0.3.13",
         "ioredis": "^4.28.2",
         "pg": "^8.7.1",
         "winston": "^3.3.3",

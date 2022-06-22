@@ -20,6 +20,7 @@
     "diff1TargetNumZero": 30,
     "pool": {
         "port": 20032,
+        "proxyProtocol": false,
         "diff": 1,
 
         "varDiff": {

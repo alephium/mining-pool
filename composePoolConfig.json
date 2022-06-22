@@ -21,6 +21,7 @@
     "pool": {
         "port": 20032,
         "diff": 1,
+        "proxyProtocol": false,
 
         "varDiff": {
             "minDiff": 1,

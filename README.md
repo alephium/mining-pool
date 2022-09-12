@@ -168,3 +168,30 @@ Lastly, for single-user setups these are suitable payout and reward settings:
     "minPaymentCoins": "10",            // Increases the min payout to 10 Alph
     "paymentInterval": 7200,            // Increased to 1 payment every 2 hours.
 ```
+
+
+## TLS configuration
+
+
+```
+...
+    "pool": {
+        "port": 20443,
+        "tls": true,
+        "privateKeyPath": "/path/to/pool.key",
+        "publicCertPath": "/path/to/pool.pem",
+        ...
+    }
+```
+
+Generate a basic, self-signed TLS certificate
+
+```
+openssl req -newkey rsa:4096 \
+            -x509 \
+            -sha256 \
+            -days 3650 \
+            -nodes \
+            -out pool.pem \
+            -keyout pool.key
+```

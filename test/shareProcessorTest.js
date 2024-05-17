@@ -134,7 +134,7 @@ describe('test share processor', function(){
         var ghostUncleBlock = {hash: 'block1', height: 1, chainFrom: 0, chainTo: 0, transactions: ghostUncleCoinbaseTx, inMainChain: false, submittedMs: currentMs, ghostUncles: []}
 
         var mainChainCoinbaseTx = [{unsigned:{fixedOutputs:[{attoAlphAmount: rewardAmount},{attoAlphAmount: ghostUncleRewardAmount}]}}];
-        var mainChainBlock = {hash: 'block2', height: 2, chainFrom: 0, chainTo: 0, transactions: mainChainCoinbaseTx, inMainChain: true, submittedMs: currentMs, ghostUncles: [{hash:ghostUncleBlock.hash}]}
+        var mainChainBlock = {hash: 'block2', height: 2, chainFrom: 0, chainTo: 0, transactions: mainChainCoinbaseTx, inMainChain: true, submittedMs: currentMs, ghostUncles: [{blockHash:ghostUncleBlock.hash}]}
         var blocks = [ghostUncleBlock, mainChainBlock]
 
         function prepare(blocks, callback){

@@ -211,7 +211,7 @@ describe('test share processor', function(){
             var redisTx = redisClient.multi();
             restServer.persist()
                 .get('/blockflow/main-chain-block-by-ghost-uncle/' + orphanBlock.hash)
-                .reply(404, { detail: `Mainchain block by ghost uncle hash ${orphanBlock.hash} not found` });
+                .reply(404, { detail: `The mainchain block that references the ghost uncle block ${orphanBlock.hash} not found` });
             for (var block of blocks){
                 restServer.persist().get('/blockflow/blocks/' + block.hash).reply(200, block);
                 var path = '/blockflow/is-block-in-main-chain?blockHash=' + block.hash;

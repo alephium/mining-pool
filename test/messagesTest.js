@@ -19,19 +19,20 @@ it('should update the job timestamp', function(){
   }
 
   for (var i = 1; i <= 10; i += 1) {
-    var now = Date.now() + (i * 60 * 1000)
-    var job = { headerBlob: randomHeaderBlob(now) }
+    var jobTs = Date.now() + (i * 60 * 1000)
+    var job = { headerBlob: randomHeaderBlob(jobTs) }
     var prevHeaderBlob = Buffer.from(job.headerBlob)
 
-    updateJobTimestamp(job, now)
+    updateJobTimestamp(job, _ => jobTs)
     expect(job.headerBlob).to.deep.equal(prevHeaderBlob)
 
-    var newTs = now + (i * 60 * 1000)
-    expect(newTs).not.equal(now)
-    updateJobTimestamp(job, newTs)
+    var delta = i * 60 * 1000
+    updateJobTimestamp(job, ts => ts + delta)
     expect(job.headerBlob).to.not.deep.equal(prevHeaderBlob)
 
-    prevHeaderBlob.writeBigUInt64BE(BigInt(newTs), prevHeaderBlob.length - 12)
+    var tsOffset = job.headerBlob.length - 12
+    prevHeaderBlob.writeBigUInt64BE(BigInt(jobTs + delta), tsOffset)
     expect(job.headerBlob).to.deep.equal(prevHeaderBlob)
+    expect(Number(job.headerBlob.readBigUInt64BE(tsOffset))).to.equal(jobTs + delta)
   }
 })
